@@ -15,6 +15,12 @@ public class PlayerMove : MonoBehaviour
   // カーソル
   [SerializeField]
   private Cursor cursor;
+    // 略
+    [SerializeField]
+    // 腕の情報。Unityエディタ上で直接設定する
+    private Arm arm_;
+    // InputSystemのFireが押下されているか否か
+    private bool isPushFire_;
 
     void Start()
     {
@@ -25,6 +31,7 @@ public class PlayerMove : MonoBehaviour
           Camera.main.TryGetComponent<Cursor>(out cursor);
         // 取得できていなければ処理を停止
         Assert.IsTrue(isGet, "componentの取得失敗");
+        isPushFire_ = false;
     }
 
 
@@ -42,6 +49,9 @@ public class PlayerMove : MonoBehaviour
     // 前ページから
     private void Update()
     {
+        // 早期リターン前に銃に入力状況を伝える
+        UpdateGunTrigger();
+
         // もしCursorのレイがヒットしてなければ早期リターン
         if (!cursor.GetIsHit()) { return; }
         // レイの衝突情報を取得
@@ -74,5 +84,46 @@ public class PlayerMove : MonoBehaviour
           input * moveSpeed_ * Time.deltaTime
         );
     }
+
+    // 前ページから
+    private void UpdateGunTrigger()
+    {
+        // armが銃を持っていなければ早期リターン
+        if (!arm_.IsGrabGun()) { return; }
+        // Fireを押下しているか否かで呼び出す処理を変える
+        if (isPushFire_)
+        {
+            arm_.OnTrigger();
+        }
+        else
+        {
+            arm_.OffTrigger();
+        }
+    }
+    // 次ページへ
+    // 前ページから
+    private void TryGetGun(Collider item)
+    {
+        GunBase gun;
+        // GunBaseコンポーネントを持っていなければ
+        if (!item.TryGetComponent(out gun)) { return; }
+        // 銃の親が居たら早期リターン
+        if (!gun.GetIsAlone()) { return; }
+        // 銃を取得
+        arm_.Grab(gun);
+    }
+
+    // 落ちてる銃に触れたら取得しようとする。
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!other.CompareTag("Item")) { return; }
+        TryGetGun(other);
+    }
+    // 次ページへ
+    public void OnFire(InputValue inputValue)
+    {
+        isPushFire_ = inputValue.isPressed;
+    }
+
 }
 
